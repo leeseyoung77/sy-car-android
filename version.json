@@ -1,6 +1,6 @@
 {
-  "versionCode": 99,
-  "versionName": "2.0.0",
+  "versionCode": 5,
+  "versionName": "1.0.4",
   "apkUrl": "https://github.com/leeseyoung77/sy-car-android/releases/download/v1.0.4/sy-car.apk",
-  "releaseNotes": "업데이트 팝업 테스트용 (테스트 후 원복 예정)"
+  "releaseNotes": "보험기간 시작일~종료일 표시, 최근 날짜 표시 제거"
 }
