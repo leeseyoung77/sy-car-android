@@ -1,0 +1,13 @@
+# Build outputs
+sy-car-android/.gradle/
+sy-car-android/build/
+sy-car-android/app/build/
+sy-car-android/local.properties
+
+# IDE
+.idea/
+*.iml
+
+# APK (releases에서 관리)
+*.apk
+*.zip
