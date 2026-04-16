@@ -176,6 +176,9 @@ export default function VehicleManager() {
   const [toast, setToast] = useState(null);
   const [mileageInput, setMileageInput] = useState({});
   const toastTimer = useRef(null);
+  const [startupUpdate, setStartupUpdate] = useState(null); // { versionName, releaseNotes, apkUrl }
+  const [startupDownloading, setStartupDownloading] = useState(false);
+  const [startupProgress, setStartupProgress] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -184,6 +187,45 @@ export default function VehicleManager() {
       if (sv && sv.length > 0 && vehicles.length === 0) setVehicles(sv);
       if (sl && sl.length > 0 && logs.length === 0) setLogs(sl);
     })();
+  }, []);
+
+  // 앱 시작 시 자동 업데이트 체크
+  useEffect(() => {
+    const bridge = window.AppBridge;
+    if (!bridge) return;
+    const DEFAULT_URL = "https://raw.githubusercontent.com/leeseyoung77/sy-car-android/main";
+    const customUrl = localStorage.getItem("update_server_url") || "";
+    const baseUrl = (customUrl.trim() || DEFAULT_URL).replace(/\/$/, "");
+
+    window.__onStartupUpdateChecked = (info) => {
+      if (!info) return;
+      const currentCode = bridge.getVersionCode();
+      if (info.versionCode > currentCode) {
+        setStartupUpdate(info);
+      }
+    };
+    window.__onStartupDownloadProgress = (p) => {
+      setStartupProgress(p);
+    };
+    window.__onStartupUpdateError = (msg) => {
+      setStartupDownloading(false);
+      setStartupUpdate(null);
+    };
+
+    // checkUpdate 콜백을 startup 전용으로 임시 교체
+    const origCheck = window.__onUpdateChecked;
+    const origProgress = window.__onDownloadProgress;
+    const origError = window.__onUpdateError;
+    window.__onUpdateChecked = window.__onStartupUpdateChecked;
+    bridge.checkUpdate(baseUrl + "/version.json");
+
+    // 설정 페이지 콜백 복원을 위해 짧은 딜레이 후 복원
+    const timer = setTimeout(() => {
+      if (window.__onUpdateChecked === window.__onStartupUpdateChecked) {
+        window.__onUpdateChecked = origCheck || null;
+      }
+    }, 10000);
+    return () => clearTimeout(timer);
   }, []);
 
   useEffect(() => { storageSync("vm_vehicles", vehicles); }, [vehicles]);
@@ -316,6 +358,45 @@ export default function VehicleManager() {
       {view === "detail" && selectedVehicle && <DetailView vehicle={selectedVehicle} logs={vehicleLogs} onBack={goHome} onEdit={() => { setEditingVehicle(selectedVehicle); setView("form"); }} onDelete={() => deleteVehicle(selectedVehicle.id)} onAddLog={() => setEditingLog({})} onEditLog={(l) => setEditingLog(l)} onDeleteLog={deleteLog} getMaintenanceStatus={getMaintenanceStatus} mileageInput={mileageInput} setMileageInput={setMileageInput} updateMileage={updateMileage} onQuickComplete={quickComplete} getEstimatedMileage={getEstimatedMileage} />}
       {view === "settings" && <SettingsView onBack={goHome} showToast={showToast} />}
       {editingLog !== null && view === "detail" && <LogModal initial={editingLog} vehicle={selectedVehicle} onSave={saveLog} onCancel={() => setEditingLog(null)} />}
+
+      {/* 시작 시 업데이트 팝업 */}
+      {startupUpdate && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ background: "var(--color-background-primary, #fff)", borderRadius: 20, padding: "28px 24px", width: "100%", maxWidth: 340, animation: "slideUp .3s ease" }}>
+            <div style={{ textAlign: "center", marginBottom: 16 }}>
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#FF8C00" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: "0 auto 12px", display: "block" }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>새 버전이 있습니다</h3>
+              <p style={{ margin: "8px 0 0", fontSize: 15, color: "#FF8C00", fontWeight: 600 }}>v{startupUpdate.versionName}</p>
+            </div>
+            {startupUpdate.releaseNotes && (
+              <div style={{ background: "var(--color-background-secondary, #f5f5f5)", borderRadius: 12, padding: "12px 14px", marginBottom: 16, fontSize: 13, color: "var(--color-text-secondary, #888)", lineHeight: 1.5 }}>
+                {startupUpdate.releaseNotes}
+              </div>
+            )}
+            {startupDownloading ? (
+              <div>
+                <div style={{ fontSize: 13, color: "var(--color-text-secondary, #888)", textAlign: "center", marginBottom: 10 }}>다운로드 중... {startupProgress}%</div>
+                <div style={{ width: "100%", height: 8, borderRadius: 4, background: "var(--color-background-secondary, #f0f0f0)", overflow: "hidden" }}>
+                  <div style={{ width: startupProgress + "%", height: "100%", borderRadius: 4, background: "linear-gradient(90deg, #FF8C00, #3B6D11)", transition: "width 0.3s" }} />
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={() => setStartupUpdate(null)} style={{ flex: 1, padding: "13px 0", borderRadius: 12, border: "0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.12))", background: "none", fontSize: 15, cursor: "pointer", color: "var(--color-text-secondary, #888)" }}>나중에</button>
+                <button onClick={() => {
+                  const bridge = window.AppBridge;
+                  if (!bridge || !startupUpdate.apkUrl) return;
+                  setStartupDownloading(true);
+                  setStartupProgress(0);
+                  window.__onDownloadProgress = (p) => setStartupProgress(p);
+                  window.__onUpdateError = (msg) => { setStartupDownloading(false); setStartupUpdate(null); showToast(msg || "다운로드 실패"); };
+                  bridge.downloadAndInstallApk(startupUpdate.apkUrl);
+                }} style={{ flex: 1, padding: "13px 0", borderRadius: 12, border: "none", background: "#FF8C00", fontSize: 15, fontWeight: 600, cursor: "pointer", color: "#fff" }}>업데이트</button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(-8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
