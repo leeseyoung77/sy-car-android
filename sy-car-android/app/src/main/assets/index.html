@@ -1599,6 +1599,7 @@ function SettingsView({ onBack, showToast }) {
   const [updateStatus, setUpdateStatus] = useState("idle"); // idle, checking, available, downloading, upToDate, error
   const [updateInfo, setUpdateInfo] = useState(null);
   const [downloadProgress, setDownloadProgress] = useState(0);
+  const DEFAULT_UPDATE_URL = "https://raw.githubusercontent.com/leeseyoung77/sy-car-android/main";
   const [updateUrl, setUpdateUrl] = useState(() => localStorage.getItem("update_server_url") || "");
   const [showUrlInput, setShowUrlInput] = useState(false);
   const bridge = window.AppBridge;
@@ -1649,19 +1650,14 @@ function SettingsView({ onBack, showToast }) {
   }, [bridge, showToast]);
 
   const handleCheckUpdate = () => {
-    if (!updateUrl.trim()) {
-      setShowUrlInput(true);
-      showToast("업데이트 서버 URL을 입력해주세요");
-      return;
-    }
     if (!bridge) {
       showToast("앱에서만 업데이트가 가능합니다");
       return;
     }
     setUpdateStatus("checking");
     setUpdateInfo(null);
-    const versionJsonUrl = updateUrl.trim().replace(/\/$/, "") + "/version.json";
-    bridge.checkUpdate(versionJsonUrl);
+    const baseUrl = (updateUrl.trim() || DEFAULT_UPDATE_URL).replace(/\/$/, "");
+    bridge.checkUpdate(baseUrl + "/version.json");
   };
 
   const handleDownloadUpdate = () => {
