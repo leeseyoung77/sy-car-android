@@ -1576,7 +1576,8 @@ function HomeView({ vehicles, onSelect, onAdd, onSettings, logs, getMaintenanceS
             const vLogs = logs.filter((l) => l.vehicleId === v.id);
             const lastLog = vLogs.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
             return (
-              <div key={v.id} onClick={() => onSelect(v.id)} style={{ background: "var(--color-background-primary, #fff)", border: "0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.1))", borderRadius: 16, overflow: "hidden", cursor: "pointer", animation: `slideUp .3s ease ${i * 0.06}s both`, transition: "transform .15s ease", padding: "14px 16px", display: "flex", gap: 14, alignItems: "flex-start" }}>
+              <div key={v.id} onClick={() => onSelect(v.id)} style={{ background: "var(--color-background-primary, #fff)", border: "0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.1))", borderRadius: 16, overflow: "hidden", cursor: "pointer", animation: `slideUp .3s ease ${i * 0.06}s both`, transition: "transform .15s ease", padding: "14px 16px" }}>
+              <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8 }}>
                   <div style={{ width: 86, height: 86, minWidth: 86, borderRadius: 14, overflow: "hidden", background: "var(--color-background-secondary, #f3f3f3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     {v.photos && v.photos.length > 0 ? (
@@ -1644,23 +1645,24 @@ function HomeView({ vehicles, onSelect, onAdd, onSettings, logs, getMaintenanceS
                     {soonCount > 0 && <span style={{ fontSize: 11, background: "#FAEEDA", color: "#854F0B", padding: "3px 10px", borderRadius: 20 }}>임박 {soonCount}</span>}
                     {overdueCount === 0 && soonCount === 0 && <span style={{ fontSize: 11, background: "#EAF3DE", color: "#3B6D11", padding: "3px 10px", borderRadius: 20 }}>양호</span>}
                     <RecallBadge vehicle={v} onClick={(e) => { e.stopPropagation(); setRecallVehicle(v); }} />
-                  {(() => {
-                    const recent3 = vLogs.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 3);
-                    if (recent3.length === 0) return null;
-                    return (
-                      <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 8, borderTop: "0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.06))", paddingTop: 8 }}>
-                        {recent3.map((log, li) => (
-                          <div key={li} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--color-text-secondary, #888)" }}>
-                            <span style={{ color: "var(--color-text-tertiary, #aaa)", flexShrink: 0 }}>{formatDate(log.date)}</span>
-                            <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{log.category}</span>
-                            {log.mileage && <span style={{ marginLeft: "auto", flexShrink: 0, color: "var(--color-text-tertiary, #aaa)" }}>{Number(log.mileage).toLocaleString()}km</span>}
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
                   </div>
                 </div>
+              </div>
+              {(() => {
+                const recent3 = vLogs.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 3);
+                if (recent3.length === 0) return null;
+                return (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 10, borderTop: "0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.06))", paddingTop: 8 }}>
+                    {recent3.map((log, li) => (
+                      <div key={li} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--color-text-secondary, #888)" }}>
+                        <span style={{ color: "var(--color-text-tertiary, #aaa)", flexShrink: 0 }}>{formatDate(log.date)}</span>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{log.category}</span>
+                        {log.mileage && <span style={{ flexShrink: 0, color: "var(--color-text-tertiary, #aaa)" }}>{Number(log.mileage).toLocaleString()}km</span>}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
               </div>
             );
           })}
