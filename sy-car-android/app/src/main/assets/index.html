@@ -848,8 +848,6 @@ function RecallModal({ vehicle, onClose }) {
   };
 
   useEffect(() => {
-    const cached = loadRecallCache(vehicle);
-    if (cached) { setRecalls(cached); return; }
     setLoading(true);
     let cancelled = false;
     (async () => {
@@ -859,7 +857,12 @@ function RecallModal({ vehicle, onClose }) {
         setRecalls(results);
         saveRecallCache(vehicle, results);
       } catch (e) {
-        if (!cancelled) setError("리콜 정보를 가져오는 중 오류가 발생했습니다.");
+        if (!cancelled) {
+          // 네트워크 오류 시 캐시된 데이터 사용
+          const cached = loadRecallCache(vehicle);
+          if (cached) { setRecalls(cached); }
+          else { setError("리콜 정보를 가져오는 중 오류가 발생했습니다."); }
+        }
       }
       finally { if (!cancelled) setLoading(false); }
     })();
@@ -1443,29 +1446,14 @@ function InsuranceModal({ vehicle, onClose }) {
 
 function RecallBadge({ vehicle, onClick }) {
   const cached = loadRecallCache(vehicle);
-  if (cached === null) {
-    return (
-      <span onClick={onClick} style={{ fontSize: 11, background: "#EEEDFE", color: "#534AB7", padding: "3px 10px", borderRadius: 20, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}>
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#534AB7" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        리콜조회
-      </span>
-    );
-  }
-  if (cached.length === 0) return null;
-  const doneIds = loadRecallDone(vehicle);
-  const pendingCount = cached.filter((_, i) => !doneIds.includes(`${(cached[i].date || "").replace(/\D/g,"")}_${i}`)).length;
-  if (pendingCount === 0) {
-    return (
-      <span onClick={onClick} style={{ fontSize: 11, background: "#EAF3DE", color: "#3B6D11", padding: "3px 10px", borderRadius: 20, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}>
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#3B6D11" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-        리콜완료
-      </span>
-    );
-  }
+  const hasPending = cached && cached.length > 0 && (() => {
+    const doneIds = loadRecallDone(vehicle);
+    return cached.some((r, i) => !doneIds.includes(`${(r.date || "").replace(/\D/g,"")}_${i}`));
+  })();
   return (
-    <span onClick={onClick} style={{ fontSize: 11, background: "#FCEBEB", color: "#A32D2D", padding: "3px 10px", borderRadius: 20, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}>
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#A32D2D" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      리콜 {pendingCount}
+    <span onClick={onClick} style={{ fontSize: 11, background: hasPending ? "#FCEBEB" : "#EEEDFE", color: hasPending ? "#A32D2D" : "#534AB7", padding: "3px 10px", borderRadius: 20, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}>
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={hasPending ? "#A32D2D" : "#534AB7"} strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      리콜조회
     </span>
   );
 }

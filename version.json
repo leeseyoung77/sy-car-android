@@ -1,6 +1,6 @@
 {
-  "versionCode": 2,
-  "versionName": "1.0.1",
-  "apkUrl": "https://github.com/leeseyoung77/sy-car-android/releases/download/v1.0.1/sy-car.apk",
-  "releaseNotes": "일 평균 주행거리 자동 계산 기능 추가, 앱 업데이트 기능 추가"
+  "versionCode": 3,
+  "versionName": "1.0.2",
+  "apkUrl": "https://github.com/leeseyoung77/sy-car-android/releases/download/v1.0.2/sy-car.apk",
+  "releaseNotes": "리콜 배지 항상 '리콜조회'로 표시, 클릭 시 최신 리콜 정보 새로 조회"
 }
