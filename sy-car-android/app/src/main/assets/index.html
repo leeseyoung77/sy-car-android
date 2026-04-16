@@ -201,11 +201,20 @@ export default function VehicleManager() {
   const selectVehicle = (id) => { setSelectedVehicleId(id); setView("detail"); };
 
   const saveVehicle = (data) => {
+    const now = new Date().toISOString().split("T")[0];
     if (data.id) {
-      setVehicles((prev) => prev.map((v) => (v.id === data.id ? { ...v, ...data } : v)));
+      setVehicles((prev) => prev.map((v) => {
+        if (v.id !== data.id) return v;
+        const updated = { ...v, ...data };
+        // 주행거리가 변경되었으면 기준일 갱신
+        if (String(data.mileage) !== String(v.mileage)) {
+          updated.mileageUpdatedAt = now;
+        }
+        return updated;
+      }));
       showToast("차량 정보가 수정되었습니다");
     } else {
-      const nv = { ...data, id: generateId(), createdAt: new Date().toISOString() };
+      const nv = { ...data, id: generateId(), createdAt: new Date().toISOString(), mileageUpdatedAt: now };
       setVehicles((prev) => [...prev, nv]);
       showToast("새 차량이 등록되었습니다");
     }
@@ -243,7 +252,7 @@ export default function VehicleManager() {
     if (!vehicle) return [];
     const schedule = MAINTENANCE_SCHEDULES[vehicle.type];
     if (!schedule) return [];
-    const km = Number(vehicle.mileage) || 0;
+    const km = getEstimatedMileage(vehicle);
     const vLogs = logs.filter((l) => l.vehicleId === vehicle.id);
     return schedule.items.map((item) => {
       const relatedLogs = vLogs.filter((l) => l.category === item.name).sort((a, b) => (Number(b.mileage) || 0) - (Number(a.mileage) || 0));
@@ -263,8 +272,21 @@ export default function VehicleManager() {
   const updateMileage = (vehicleId, newMileage) => {
     const num = parseInt(newMileage);
     if (isNaN(num) || num < 0) return;
-    setVehicles((prev) => prev.map((v) => v.id === vehicleId ? { ...v, mileage: num } : v));
+    const now = new Date().toISOString().split("T")[0];
+    setVehicles((prev) => prev.map((v) => v.id === vehicleId ? { ...v, mileage: num, mileageUpdatedAt: now } : v));
     showToast("주행거리가 업데이트되었습니다");
+  };
+
+  // 일 평균 주행거리 기반 추정 주행거리 계산
+  const getEstimatedMileage = (vehicle) => {
+    const base = Number(vehicle.mileage) || 0;
+    const daily = Number(vehicle.dailyMileage) || 0;
+    if (daily <= 0 || !vehicle.mileageUpdatedAt) return base;
+    const lastUpdate = new Date(vehicle.mileageUpdatedAt + "T00:00:00");
+    const now = new Date();
+    const daysDiff = Math.floor((now - lastUpdate) / (1000 * 60 * 60 * 24));
+    if (daysDiff <= 0) return base;
+    return Math.round(base + (daysDiff * daily));
   };
 
   const quickComplete = (itemName) => {
@@ -274,7 +296,7 @@ export default function VehicleManager() {
       vehicleId: selectedVehicle.id,
       date: new Date().toISOString().split("T")[0],
       category: itemName,
-      mileage: selectedVehicle.mileage || 0,
+      mileage: getEstimatedMileage(selectedVehicle),
       cost: "",
       shop: "",
       notes: "정비 현황에서 빠른 완료 처리",
@@ -289,9 +311,9 @@ export default function VehicleManager() {
         <div style={{ position: "fixed", top: 20, left: "50%", transform: "translateX(-50%)", background: "var(--color-text-primary, #1a1a1a)", color: "var(--color-background-primary, #fff)", padding: "10px 24px", borderRadius: 40, fontSize: 13, fontWeight: 500, zIndex: 999, animation: "fadeIn .25s ease", whiteSpace: "nowrap" }}>{toast}</div>
       )}
 
-      {view === "home" && <HomeView vehicles={vehicles} onSelect={selectVehicle} onAdd={() => { setEditingVehicle({}); setView("form"); }} onSettings={() => setView("settings")} logs={logs} getMaintenanceStatus={getMaintenanceStatus} mileageInput={mileageInput} setMileageInput={setMileageInput} updateMileage={updateMileage} />}
+      {view === "home" && <HomeView vehicles={vehicles} onSelect={selectVehicle} onAdd={() => { setEditingVehicle({}); setView("form"); }} onSettings={() => setView("settings")} logs={logs} getMaintenanceStatus={getMaintenanceStatus} mileageInput={mileageInput} setMileageInput={setMileageInput} updateMileage={updateMileage} getEstimatedMileage={getEstimatedMileage} />}
       {view === "form" && <VehicleForm initial={editingVehicle} onSave={saveVehicle} onCancel={() => { setEditingVehicle(null); setView(selectedVehicleId ? "detail" : "home"); }} />}
-      {view === "detail" && selectedVehicle && <DetailView vehicle={selectedVehicle} logs={vehicleLogs} onBack={goHome} onEdit={() => { setEditingVehicle(selectedVehicle); setView("form"); }} onDelete={() => deleteVehicle(selectedVehicle.id)} onAddLog={() => setEditingLog({})} onEditLog={(l) => setEditingLog(l)} onDeleteLog={deleteLog} getMaintenanceStatus={getMaintenanceStatus} mileageInput={mileageInput} setMileageInput={setMileageInput} updateMileage={updateMileage} onQuickComplete={quickComplete} />}
+      {view === "detail" && selectedVehicle && <DetailView vehicle={selectedVehicle} logs={vehicleLogs} onBack={goHome} onEdit={() => { setEditingVehicle(selectedVehicle); setView("form"); }} onDelete={() => deleteVehicle(selectedVehicle.id)} onAddLog={() => setEditingLog({})} onEditLog={(l) => setEditingLog(l)} onDeleteLog={deleteLog} getMaintenanceStatus={getMaintenanceStatus} mileageInput={mileageInput} setMileageInput={setMileageInput} updateMileage={updateMileage} onQuickComplete={quickComplete} getEstimatedMileage={getEstimatedMileage} />}
       {view === "settings" && <SettingsView onBack={goHome} showToast={showToast} />}
       {editingLog !== null && view === "detail" && <LogModal initial={editingLog} vehicle={selectedVehicle} onSave={saveLog} onCancel={() => setEditingLog(null)} />}
 
@@ -1448,7 +1470,7 @@ function RecallBadge({ vehicle, onClick }) {
   );
 }
 
-function HomeView({ vehicles, onSelect, onAdd, onSettings, logs, getMaintenanceStatus, mileageInput, setMileageInput, updateMileage }) {
+function HomeView({ vehicles, onSelect, onAdd, onSettings, logs, getMaintenanceStatus, mileageInput, setMileageInput, updateMileage, getEstimatedMileage }) {
   const [specVehicle, setSpecVehicle] = useState(null);
   const [recallVehicle, setRecallVehicle] = useState(null);
   const [serviceVehicle, setServiceVehicle] = useState(null);
@@ -1542,7 +1564,7 @@ function HomeView({ vehicles, onSelect, onAdd, onSettings, logs, getMaintenanceS
                         })()}
                       </div>
                     </div>
-                    <span style={{ fontSize: 14, fontWeight: 500, whiteSpace: "nowrap", marginLeft: 8 }}>{Number(v.mileage || 0).toLocaleString()} km</span>
+                    <span style={{ fontSize: 14, fontWeight: 500, whiteSpace: "nowrap", marginLeft: 8 }}>{getEstimatedMileage(v).toLocaleString()} km</span>
                   </div>
                   <div style={{ fontSize: 12, color: "var(--color-text-secondary, #888)", marginTop: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {[v.manufacturer, v.model, v.year && `${v.year}년식`].filter(Boolean).join(" · ")}
@@ -1997,22 +2019,29 @@ function VehicleForm({ initial, onSave, onCancel }) {
           <input style={inputStyle} type="number" value={form.mileage} onChange={(e) => update("mileage", e.target.value)} placeholder="0" />
         </div>
 
+        <div>
+          <label style={labelStyle}>일 평균 주행거리 (km)</label>
+          <input style={inputStyle} type="number" value={form.dailyMileage || ""} onChange={(e) => update("dailyMileage", e.target.value)} placeholder="예: 40" />
+          <div style={{ fontSize: 12, color: "var(--color-text-tertiary, #aaa)", marginTop: 6 }}>입력하면 날짜가 지날수록 주행거리가 자동으로 증가합니다</div>
+        </div>
+
         <button onClick={handleSubmit} style={{ width: "100%", padding: "14px 0", borderRadius: 14, border: "none", background: "var(--color-text-primary, #1a1a1a)", color: "var(--color-background-primary, #fff)", fontSize: 15, fontWeight: 500, cursor: "pointer", marginTop: 8 }}>{isEdit ? "수정 완료" : "차량 등록"}</button>
       </div>
     </div>
   );
 }
 
-function DetailView({ vehicle, logs, onBack, onEdit, onDelete, onAddLog, onEditLog, onDeleteLog, getMaintenanceStatus, mileageInput, setMileageInput, updateMileage, onQuickComplete }) {
+function DetailView({ vehicle, logs, onBack, onEdit, onDelete, onAddLog, onEditLog, onDeleteLog, getMaintenanceStatus, mileageInput, setMileageInput, updateMileage, onQuickComplete, getEstimatedMileage }) {
   const [tab, setTab] = useState("status");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const statuses = getMaintenanceStatus(vehicle);
   const [editMileage, setEditMileage] = useState(false);
-  const [tempMileage, setTempMileage] = useState(String(vehicle.mileage || 0));
+  const estimatedKm = getEstimatedMileage(vehicle);
+  const [tempMileage, setTempMileage] = useState(String(estimatedKm));
   const [viewPhoto, setViewPhoto] = useState(null);
   const [photoIdx, setPhotoIdx] = useState(0);
 
-  useEffect(() => { setTempMileage(String(vehicle.mileage || 0)); }, [vehicle.mileage]);
+  useEffect(() => { setTempMileage(String(getEstimatedMileage(vehicle))); }, [vehicle.mileage, vehicle.mileageUpdatedAt, vehicle.dailyMileage]);
 
   const overdue = statuses.filter((s) => s.status === "overdue");
   const soon = statuses.filter((s) => s.status === "soon");
@@ -2099,8 +2128,11 @@ function DetailView({ vehicle, logs, onBack, onEdit, onDelete, onAddLog, onEditL
           ) : (
             <>
               <div>
-                <div style={{ fontSize: 12, color: "var(--color-text-secondary, #888)" }}>총 주행거리</div>
-                <div style={{ fontSize: 22, fontWeight: 500, marginTop: 2 }}>{Number(vehicle.mileage || 0).toLocaleString()} km</div>
+                <div style={{ fontSize: 12, color: "var(--color-text-secondary, #888)" }}>총 주행거리 (추정)</div>
+                <div style={{ fontSize: 22, fontWeight: 500, marginTop: 2 }}>{getEstimatedMileage(vehicle).toLocaleString()} km</div>
+                {Number(vehicle.dailyMileage) > 0 && (
+                  <div style={{ fontSize: 11, color: "var(--color-text-tertiary, #aaa)", marginTop: 2 }}>일 평균 {Number(vehicle.dailyMileage).toLocaleString()}km · 기준일 {vehicle.mileageUpdatedAt || "-"}</div>
+                )}
               </div>
               <button onClick={() => setEditMileage(true)} style={{ background: "none", border: "0.5px solid var(--color-border-tertiary, rgba(0,0,0,0.12))", borderRadius: 8, padding: "6px 14px", fontSize: 12, cursor: "pointer", color: "var(--color-text-secondary)" }}>수정</button>
             </>
@@ -2210,7 +2242,7 @@ function LogModal({ initial, vehicle, onSave, onCancel }) {
   const [form, setForm] = useState({
     date: initial?.date || new Date().toISOString().split("T")[0],
     category: initial?.category || "",
-    mileage: initial?.mileage || vehicle.mileage || "",
+    mileage: initial?.mileage || (() => { const b = Number(vehicle.mileage) || 0; const d = Number(vehicle.dailyMileage) || 0; if (d <= 0 || !vehicle.mileageUpdatedAt) return b || ""; const days = Math.floor((new Date() - new Date(vehicle.mileageUpdatedAt + "T00:00:00")) / 86400000); return days > 0 ? Math.round(b + days * d) : b || ""; })(),
     cost: initial?.cost || "",
     shop: initial?.shop || "",
     notes: initial?.notes || "",
