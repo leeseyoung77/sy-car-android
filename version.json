@@ -1,6 +1,6 @@
 {
-  "versionCode": 4,
-  "versionName": "1.0.3",
-  "apkUrl": "https://github.com/leeseyoung77/sy-car-android/releases/download/v1.0.3/sy-car.apk",
-  "releaseNotes": "앱 시작 시 자동 업데이트 체크, 기본 업데이트 서버 설정, 리콜조회 개선, 일 평균 주행거리 자동 계산"
+  "versionCode": 5,
+  "versionName": "1.0.4",
+  "apkUrl": "https://github.com/leeseyoung77/sy-car-android/releases/download/v1.0.4/sy-car.apk",
+  "releaseNotes": "보험기간 시작일~종료일 표시, 최근 날짜 표시 제거"
 }

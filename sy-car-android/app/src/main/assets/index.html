@@ -1616,22 +1616,23 @@ function HomeView({ vehicles, onSelect, onAdd, onSettings, logs, getMaintenanceS
                     <div style={{ overflow: "hidden", minWidth: 0, flex: 1 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span style={{ fontSize: 15, fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{v.nickname || v.model || "이름 없음"}</span>
-                        {(() => {
-                          const ins = loadInsurance(v.id);
-                          if (!ins || !ins.endDate) return null;
-                          const end = new Date(ins.endDate);
-                          const now = new Date();
-                          const diffDays = (end - now) / (1000 * 60 * 60 * 24);
-                          const isExpiring = diffDays >= 0 && diffDays <= 60;
-                          const isExpired = diffDays < 0;
-                          const dateStr = ins.endDate.replace(/-/g, ".").slice(2);
-                          return (
-                            <span onClick={(e) => { e.stopPropagation(); setInsuranceVehicle(v); }} style={{ fontSize: 10, color: (isExpired || isExpiring) ? "#D44" : "var(--color-text-tertiary, #aaa)", whiteSpace: "nowrap", cursor: "pointer", flexShrink: 0 }}>
-                              보험만료일 {dateStr}
-                            </span>
-                          );
-                        })()}
                       </div>
+                      {(() => {
+                        const ins = loadInsurance(v.id);
+                        if (!ins || !ins.endDate) return null;
+                        const end = new Date(ins.endDate);
+                        const now = new Date();
+                        const diffDays = (end - now) / (1000 * 60 * 60 * 24);
+                        const isExpiring = diffDays >= 0 && diffDays <= 60;
+                        const isExpired = diffDays < 0;
+                        const startStr = ins.startDate ? ins.startDate.replace(/-/g, ".").slice(2) : "";
+                        const endStr = ins.endDate.replace(/-/g, ".").slice(2);
+                        return (
+                          <div onClick={(e) => { e.stopPropagation(); setInsuranceVehicle(v); }} style={{ fontSize: 11, color: (isExpired || isExpiring) ? "#D44" : "var(--color-text-tertiary, #aaa)", cursor: "pointer", marginTop: 2 }}>
+                            보험기간 {startStr}{startStr ? " ~ " : ""}{endStr}
+                          </div>
+                        );
+                      })()}
                     </div>
                     <span style={{ fontSize: 14, fontWeight: 500, whiteSpace: "nowrap", marginLeft: 8 }}>{getEstimatedMileage(v).toLocaleString()} km</span>
                   </div>
@@ -1643,7 +1644,6 @@ function HomeView({ vehicles, onSelect, onAdd, onSettings, logs, getMaintenanceS
                     {soonCount > 0 && <span style={{ fontSize: 11, background: "#FAEEDA", color: "#854F0B", padding: "3px 10px", borderRadius: 20 }}>임박 {soonCount}</span>}
                     {overdueCount === 0 && soonCount === 0 && <span style={{ fontSize: 11, background: "#EAF3DE", color: "#3B6D11", padding: "3px 10px", borderRadius: 20 }}>양호</span>}
                     <RecallBadge vehicle={v} onClick={(e) => { e.stopPropagation(); setRecallVehicle(v); }} />
-                    {lastLog && <span style={{ fontSize: 11, color: "var(--color-text-tertiary, #aaa)" }}>최근: {formatDate(lastLog.date)}</span>}
                   {(() => {
                     const recent3 = vLogs.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 3);
                     if (recent3.length === 0) return null;
