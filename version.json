@@ -1,6 +1,6 @@
 {
-  "versionCode": 6,
-  "versionName": "1.0.5",
-  "apkUrl": "https://github.com/leeseyoung77/sy-car-android/releases/download/v1.0.5/sy-car.apk",
-  "releaseNotes": "보험기간 표시 개선, 정비내역 레이아웃 수정"
+  "versionCode": 7,
+  "versionName": "1.0.6",
+  "apkUrl": "https://github.com/leeseyoung77/sy-car-android/releases/download/v1.0.6/sy-car.apk",
+  "releaseNotes": "다크 테마 UI 적용"
 }

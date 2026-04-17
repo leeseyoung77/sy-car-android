@@ -270,8 +270,8 @@ public class MainActivity extends Activity {
             WindowManager.LayoutParams.FLAG_FULLSCREEN
         );
 
-        // 상태바 색상 (주황색)
-        getWindow().setStatusBarColor(0xFFFF8C00);
+        // 상태바 색상 (다크 테마)
+        getWindow().setStatusBarColor(0xFF0F1923);
 
         // WebView 생성
         webView = new WebView(this);
